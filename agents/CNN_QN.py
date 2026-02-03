@@ -255,11 +255,6 @@ def train_image_dqn(
     eval_episodes=10
     ):
 
-    # AJOUT : Variables pour l'arrêt précoce
-    best_eval_reward = -float('inf')
-    no_improvement_count = 0
-    patience = 5  # Si pas d'amélioration pendant 20 évals, on stop
-
     log_dir = f"logs/image_dqn_{time.strftime('%Y%m%d-%H%M%S')}"
     writer = SummaryWriter(log_dir)
     # Create models folder if it does not exist
@@ -347,20 +342,6 @@ def train_image_dqn(
             if eval_stats['mean_length'] < mean_length:
                 mean_length = eval_stats['mean_length']
                 torch.save(agent.q_net.state_dict(), f"models/agent_DQN_best.pth")
-
-            current_reward = eval_stats['mean_reward']
-
-            if current_reward > best_eval_reward:
-                best_eval_reward = current_reward
-                no_improvement_count = 0
-                torch.save(agent.q_net.state_dict(), f"models/agent_DQN_best.pth")
-            else:
-                no_improvement_count += 1
-                print(f"  >>> Pas d'amélioration ({no_improvement_count}/{patience})")
-            
-            if no_improvement_count >= patience:
-                print("STOP : Le reward s'est stabilisé, arrêt de l'entraînement")
-                break
 
         print(f"[Train] Ep {ep:4d} | Reward: {ep_reward:.2f}")
 
