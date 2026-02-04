@@ -2,15 +2,19 @@ from stable_baselines3 import PPO,A2C,TD3
 from stable_baselines3.common.noise import NormalActionNoise
 import numpy as np
 from stable_baselines3.common.callbacks import EvalCallback
+import torch
 
 def train_rl_agent_ppo_mlp(env,eval_env, timesteps=2000000,checkpoint_dir=None,criculam_learning=False):
     # model = PPO("MlpPolicy", env, verbose=1,device='cpu', tensorboard_log="./ppo_shepherd_logs/")
     log_dir = f"./logs/ppo/"
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
     if checkpoint_dir is not None:
         print(f"Loading checkpoint from {checkpoint_dir}...")
         model=PPO.load(checkpoint_dir,
                 env=env,
+                device=device,
                 n_steps=2048,
                 ent_coef=0.003,
                 learning_rate=3e-4,
@@ -27,6 +31,7 @@ def train_rl_agent_ppo_mlp(env,eval_env, timesteps=2000000,checkpoint_dir=None,c
         print("No checkpoint provided, training from scratch.")
         model = PPO("MlpPolicy",
                     env=env,
+                    device=device,
                     n_steps=2048,
                     ent_coef=0.003,
                     learning_rate=3e-4,

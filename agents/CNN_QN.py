@@ -132,14 +132,18 @@ class ImageDQNAgent:
         eps_start=1.0,
         eps_end=0.05,
         eps_decay=200_000,
-        device="cpu"
+        device=None
     ):
-        self.device = device
+        if device is None:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        else:
+            self.device = device
+            
         self.n_actions = n_actions
         self.gamma = gamma
 
-        self.q_net = ImageQNetwork(n_actions).to(device)
-        self.target_net = ImageQNetwork(n_actions).to(device)
+        self.q_net = ImageQNetwork(n_actions).to(self.device)
+        self.target_net = ImageQNetwork(n_actions).to(self.device)
         self.target_net.load_state_dict(self.q_net.state_dict())
         self.target_net.eval()
 
