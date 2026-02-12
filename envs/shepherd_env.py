@@ -15,9 +15,9 @@ class Sheep:
         self.is_safe = False
 
 import gym
-import numpy as np
 from gym import spaces
-
+import numpy as np
+import pygame
 
 class ShepherdEnv(gym.Env):
     def __init__(
@@ -27,21 +27,23 @@ class ShepherdEnv(gym.Env):
         goal_radius=0.7,
         obstacle_radius=0,
         sheep_repulsion_radius=0.2,
-        shepherd_speed=0.05,     # NEW: constant shepherd speed
+        shepherd_speed=0.05,
         max_steps=500,
-        activate_sheep=False
+        active_sheep=False  # <--- NOUVEL ARGUMENT AJOUTÉ ICI
     ):
         super().__init__()
 
-        self.activate_sheep = activate_sheep
         self.n_sheep = n_sheep
         self.world_size = world_size
         self.goal_radius = goal_radius
+        self.active_sheep = active_sheep # <--- On stocke l'information
+
         if obstacle_radius > 0.3:
             print("Warning: obstacle_radius too large, setting to 0.3")
             self.obstacle_radius = 0.3
         else:
             self.obstacle_radius = obstacle_radius
+        
         self.repulsion_radius = sheep_repulsion_radius
         self.shepherd_speed = shepherd_speed
         self.max_steps = max_steps
@@ -71,7 +73,6 @@ class ShepherdEnv(gym.Env):
         self.steps = 0
 
         self.shepherd = np.random.uniform(-0.8, 0.8, size=2)
-        # self.shepherd_dir = 0  # initial direction
         self.obstacle = np.random.uniform(-0.8, 0.8, size=2)
         self.goal = np.random.uniform(-0.8, 0.8, size=2)
         
@@ -107,6 +108,7 @@ class ShepherdEnv(gym.Env):
 
     def _mean_sheep_goal_dist(self):
         return np.mean([np.linalg.norm(s - self.goal) for s in self.sheep])
+    
     def _max_sheep_goal_dist(self):
         return np.max([np.linalg.norm(s - self.goal) for s in self.sheep])
 
@@ -133,10 +135,14 @@ class ShepherdEnv(gym.Env):
             vec = s - self.shepherd
             dist = np.linalg.norm(vec)
 
+            # --- LOGIQUE MODIFIÉE ICI ---
             if dist < self.repulsion_radius:
+                # Comportement de fuite (Si le berger est proche)
                 move += (vec / (dist + 1e-6)) * 0.05
-            elif self.activate_sheep:
-                move += np.random.uniform(-0.01, 0.01, size=2) # Ajout d'un petit mouvement aléatoire pour éviter les configurations statiques
+            elif self.active_sheep:
+                # Comportement aléatoire (Si le berger est loin ET active_sheep est True)
+                move += np.random.uniform(-0.01, 0.01, size=2)
+            # ----------------------------
 
             if np.linalg.norm(s - self.goal) > self.goal_radius:
                 if self.obstacle_radius > 0:
@@ -153,7 +159,6 @@ class ShepherdEnv(gym.Env):
         # 1. Sheep progress toward goal
         curr_dist = self._mean_sheep_goal_dist()
         reward += (self.prev_goal_dist - curr_dist) * 300.0
-        # print(f"\nstep_{self.steps} Reward from sheep progress:{(self.prev_goal_dist - curr_dist) * 300.0:.2f}")
         self.prev_goal_dist = curr_dist
 
         # 2. Shepherd proximity to worst sheep
@@ -163,24 +168,20 @@ class ShepherdEnv(gym.Env):
         )
         dist_to_target_sheep = sheep_dists[furthest_idx]
         reward += 5.0 * np.exp(-5.0 * dist_to_target_sheep)
-        # print(f"step_{self.steps} Reward from shepherd proximity ({dist_to_target_sheep:.5}):{20.0 * np.exp(-5.0 * dist_to_target_sheep):.2f}")
 
         # 3. Small movement regularization
         shepherd_move = np.linalg.norm(self.shepherd - self.prev_shepherd)
         reward -= 10 *np.exp(-100.0 * shepherd_move)
-        # print(f"step_{self.steps} Penalty from shepherd movement ({shepherd_move:.5f}):{10*np.exp(-100.0 * shepherd_move):.4f}")
 
         # --- Termination ---
         done = False
         if self._max_sheep_goal_dist() < self.goal_radius:
-            # print("All sheep reached the goal!")
             reward += 200.0*self.n_sheep
             reward += 5*(self.max_steps - self.steps)
             done = True
         else:
             for i, s in enumerate(self.sheep):
                 if np.linalg.norm(s - self.goal) < self.goal_radius:
-                    # print(f"A sheep {i} reached the goal!")
                     reward += 100.0
 
         if self.steps >= self.max_steps:
@@ -192,16 +193,9 @@ class ShepherdEnv(gym.Env):
         return self._get_obs(), reward, done, {}
     
     def render(self, mode='human'):
-        """
-        Render the Shepherd environment in normalized coordinates [-1,1].
-        - Sheep: black circles
-        - Shepherd: red circle
-        - Goal: green circle
-        """
-
         if not hasattr(self, "screen") or self.screen is None:
             pygame.init()
-            self.screen_size_px = 600  # size in pixels
+            self.screen_size_px = 600
             self.screen = pygame.display.set_mode((self.screen_size_px, self.screen_size_px))
             pygame.display.set_caption("Shepherd Environment")
             self.clock = pygame.time.Clock()
@@ -209,42 +203,34 @@ class ShepherdEnv(gym.Env):
 
         self.screen.fill((255, 255, 255))
 
-        # Helper to convert normalized [-1,1] coordinates to screen pixels
         def to_px(pos):
             return ((pos + 1) * self.screen_size_px / 2).astype(int)
 
-        # Draw goal
         pygame.draw.circle(
-            self.screen, (200, 0, 0),
+            self.screen, (0, 200, 0),
             to_px(self.goal), int(self.goal_radius * self.screen_size_px/2), width=8
         )
 
-        # Draw obstacle
         if self.obstacle_radius > 0:
             pygame.draw.circle(
                 self.screen, (100, 100, 100),
                 to_px(self.obstacle), int(self.obstacle_radius * self.screen_size_px/ 2), width=0
             )
 
-        # Draw sheep
         for s in self.sheep:
             pygame.draw.circle(
                 self.screen, (0, 0, 0),
                 to_px(s), int(0.02 * self.screen_size_px), width=0
             )
 
-        # Draw shepherd
         pygame.draw.circle(
             self.screen, (200, 0, 0),
             to_px(self.shepherd), int(0.03 * self.screen_size_px), width=0
         )
 
-        # Display step info
         text = f"Step: {self.steps}/{self.max_steps}"
         text_surface = self.font.render(text, True, (0, 0, 0))
         self.screen.blit(text_surface, (10, 10))
 
-        # Update display and limit FPS
         pygame.display.flip()
         self.clock.tick(30)
-
