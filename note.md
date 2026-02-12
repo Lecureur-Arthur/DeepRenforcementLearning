@@ -1,0 +1,78 @@
+# STEP 1 : 
+
+### python test.py -t PPO -a models/ppo_sheep1_obst0.zip -s 1 -n 100
+
+Ran 100 episodes.
+Average reward: 1174.61 ± 252.41 (95% CI)
+
+
+### python test.py -t TD3 -a models/td3_sheep1_obst0.zip -s 1 -n 100
+
+Ran 100 episodes.
+Average reward: 415.08 ± 194.90 (95% CI)
+
+
+### python test.py -t DQN -a models/agent_DQN_best.pth -s 1 -n 100
+
+Ran 100 episodes.
+Average reward: 254.49 ± 159.47 (95% CI)
+
+
+### python test.py -t ruleBase -s 1 -n 100
+
+Ran 100 episodes.
+Average reward: 2564.43 ± 17.60 (95% CI)
+
+## 📊 Classement et Analyse
+
+#### 1. Le "Maître" : RuleBased (`2564.43`)
+
+* **Performance :** C'est le score maximal théorique (ou presque).
+* **Pourquoi si haut ?** Dans `shepherd_env.py`, la récompense finale inclut un bonus de temps : `reward += 5*(self.max_steps - self.steps)`.
+* **Interprétation :** L'agent codé à la main ne "réfléchit" pas, il calcule la trajectoire optimale géométriquement. Il finit l'épisode quasi instantanément, accumulant un énorme bonus de temps. Sa variance (± 17) est minuscule, ce qui prouve qu'il est parfaitement stable.
+
+#### 2. Le "Meilleur Élève" : PPO (`1174.61`)
+
+* **Performance :** Il atteint environ **45%** de la performance de l'agent parfait.
+* **Interprétation :** Avec un score > 1000, **PPO a très bien appris la tâche**. Il amène le mouton au but presque à chaque fois.
+* **Pourquoi l'écart avec RuleBased ?** L'écart de 1400 points vient du temps. PPO "hésite" encore ou prend des chemins moins optimaux, perdant ainsi le bonus de rapidité. La variance (± 252) montre qu'il est parfois rapide, parfois lent.
+
+#### 3. L'élève "Moyen" : TD3 (`415.08`)
+
+* **Performance :** Nettement en dessous de PPO.
+* **Interprétation :** Il réussit la tâche (score > 200), mais il est **très lent**. Il doit probablement tourner autour du mouton ou faire beaucoup d'allers-retours avant de réussir à le pousser, ce qui consomme presque tout son temps (et donc son bonus).
+
+#### 4. Le "Débutant" : DQN (`254.49`)
+
+* **Performance :** C'est le plus faible, à la limite de la réussite.
+* **Le Handicap :** Attention, la comparaison est injuste ! DQN apprend **depuis les pixels (images)** (`CNN_QN.py`), alors que PPO et TD3 voient les positions exactes (vecteurs). C'est un problème beaucoup plus difficile.
+* **Interprétation :** Un score de 250 signifie qu'il réussit parfois à amener le mouton au but, mais souvent à la toute dernière seconde (le bonus de réussite est de +200). Il a besoin de beaucoup plus de temps d'entraînement (probablement 2x à 5x plus d'épisodes) pour égaler les agents vectoriels.
+
+---
+
+### 💡 Conseils pour la suite
+
+Tu as maintenant une "Baseline" solide. Voici ce que je te recommande :
+
+1. **Optimiser PPO (Le champion actuel) :**
+Si tu veux qu'il atteigne les 2000 points, tu peux essayer de l'entraîner plus longtemps ou d'augmenter la pénalité par étape (`reward -= 0.02` dans `shepherd_env.py`) pour le forcer à être plus rapide.
+2. **Passer au Level 2 (Moutons actifs) :**
+Ton agent PPO est prêt. Comme les moutons bougeront de manière aléatoire, le score du `RuleBased` va probablement baisser (car il ne peut pas prévoir l'aléatoire), ce qui pourrait permettre à PPO de briller davantage par sa capacité d'adaptation.
+3. **Pour DQN :**
+Si tu veux vraiment de bons résultats avec l'image, augmente le nombre d'épisodes dans `train.py` (passe de 1000 à 5000 ou 10000) ou le nombre de `timesteps`. L'apprentissage visuel est très long.
+
+Veux-tu de l'aide pour modifier le code et passer au **Level 2** maintenant ?
+
+
+# STEP 2 :
+
+### python test.py -t PPO -a models/ppo_sheep1_obst0.zip -s 1 -n 100
+
+Ran 100 episodes.
+Average reward: 1641.19 ± 236.84 (95% CI)
+
+### python test.py -t DQN -a models/agent_DQN_best.pth -s 1 -n 100
+
+Ran 100 episodes.
+Average reward: 365.53 ± 175.39 (95% CI)
+

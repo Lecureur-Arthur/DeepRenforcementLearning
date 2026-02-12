@@ -133,6 +133,8 @@ class ShepherdEnv(gym.Env):
 
             if dist < self.repulsion_radius:
                 move += (vec / (dist + 1e-6)) * 0.05
+            else:
+                move += np.random.uniform(-0.01, 0.01, size=2) # Ajout d'un petit mouvement aléatoire pour éviter les configurations statiques
 
             if np.linalg.norm(s - self.goal) > self.goal_radius:
                 if self.obstacle_radius > 0:
