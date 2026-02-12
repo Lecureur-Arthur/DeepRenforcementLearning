@@ -52,6 +52,14 @@ parser.add_argument(
     default=True,
     help="Enable or disable curriculum learning (Reinitialize optimizer and PPO internals). Default is True.",
 )
+
+parser.add_argument(
+    "--active_sheep",
+    action="store_true",
+    help="Enable activate sheep (random movement when shepherd is far). Default is False (Sleepy sheep)."
+)
+
+
 args = parser.parse_args()
 
 
@@ -64,11 +72,15 @@ eval_env = ShepherdEnv(n_sheep=args.num_sheep,
                         obstacle_radius=args.obstacle_radius,
                         goal_radius=args.goal_radius)
 
+suffix = "active" if args.active_sheep else "sleepy"
 
 if args.algorithm in ["dqn", "all"]:
     try:
         print(f"Training with CNN_QN (#sheep: {env.n_sheep})...")
         device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        dqn_filename = f"dqn_sheep{env.n_sheep}_obst{int(args.obstacle_radius*10)}_{suffix}"
+
         agent = ImageDQNAgent(
                             n_actions=N_ACTIONS,
                             lr=1e-4,
@@ -83,14 +95,12 @@ if args.algorithm in ["dqn", "all"]:
                         batch_size=32,
                         target_update=1000,
                         eval_every=5,
-                        eval_episodes=5
+                        eval_episodes=5,
+                        save_name=dqn_filename
                     )
         
     except Exception as e:
         print(f"CNN_QN training failed: {e}")
-
-
-
 
 if args.algorithm in ["ppo", "all"]:
     try:
@@ -98,7 +108,7 @@ if args.algorithm in ["ppo", "all"]:
         model = train_rl_agent_ppo_mlp(env, eval_env, timesteps=2000000,
                                        checkpoint_dir=args.checkpoint_dir,
                                        criculam_learning=args.criculam_learning)
-        model.save(f"models/ppo_sheep{env.n_sheep}_obst{int(args.obstacle_radius*10)}")
+        model.save(f"models/ppo_sheep{env.n_sheep}_obst{int(args.obstacle_radius*10)}_{suffix}")
     except Exception as e:
         print(f"PPO training failed: {e}")
 
@@ -109,6 +119,6 @@ if args.algorithm in ["td3", "all"]:
         model = train_rl_agent_td3_mlp(env, eval_env, timesteps=2000000,
                                        checkpoint_dir=args.checkpoint_dir,
                                        criculam_learning=args.criculam_learning)
-        model.save(f"models/td3_sheep{env.n_sheep}_obst{int(args.obstacle_radius*10)}")
+        model.save(f"models/td3_sheep{env.n_sheep}_obst{int(args.obstacle_radius*10)}_{suffix}")
     except Exception as e:
         print(f"TD3 training failed: {e}")

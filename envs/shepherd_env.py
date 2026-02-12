@@ -28,10 +28,12 @@ class ShepherdEnv(gym.Env):
         obstacle_radius=0,
         sheep_repulsion_radius=0.2,
         shepherd_speed=0.05,     # NEW: constant shepherd speed
-        max_steps=500
+        max_steps=500,
+        activate_sheep=False
     ):
         super().__init__()
 
+        self.activate_sheep = activate_sheep
         self.n_sheep = n_sheep
         self.world_size = world_size
         self.goal_radius = goal_radius
@@ -133,7 +135,7 @@ class ShepherdEnv(gym.Env):
 
             if dist < self.repulsion_radius:
                 move += (vec / (dist + 1e-6)) * 0.05
-            else:
+            elif self.activate_sheep:
                 move += np.random.uniform(-0.01, 0.01, size=2) # Ajout d'un petit mouvement aléatoire pour éviter les configurations statiques
 
             if np.linalg.norm(s - self.goal) > self.goal_radius:

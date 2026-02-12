@@ -123,6 +123,12 @@ def main():
         help="Radius of the goal area in the environment.",
     )
 
+    parser.add_argument(
+        "--active_sheep",
+        action="store_true",
+        help="Enable active sheep (random movement)."
+    )
+
     args = parser.parse_args()
 
     rewards = []
@@ -131,7 +137,8 @@ def main():
         env = ShepherdEnv(n_sheep=args.num_sheep,
                         max_steps=args.max_steps,
                         obstacle_radius=args.obstacle_radius,
-                        goal_radius=args.goal_radius)
+                        goal_radius=args.goal_radius,
+                        activate_sheep=args.active_sheep)
         print(
             f"Environment initialized with "
             f"{env.n_sheep} sheep for episode {eps}"

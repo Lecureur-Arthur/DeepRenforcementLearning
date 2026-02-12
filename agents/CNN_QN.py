@@ -256,7 +256,8 @@ def train_image_dqn(
     batch_size=64,
     target_update=1000,
     eval_every=1,
-    eval_episodes=10
+    eval_episodes=10,
+    save_name="dqn_agent"
     ):
 
     log_dir = f"logs/image_dqn_{time.strftime('%Y%m%d-%H%M%S')}"
@@ -345,12 +346,13 @@ def train_image_dqn(
 
             if eval_stats['mean_length'] < mean_length:
                 mean_length = eval_stats['mean_length']
-                torch.save(agent.q_net.state_dict(), f"models/agent_DQN_best.pth")
+                torch.save(agent.q_net.state_dict(), f"models/{save_name}_best.pth")
 
         print(f"[Train] Ep {ep:4d} | Reward: {ep_reward:.2f}")
 
         # Save the agent's Q-network
-        torch.save(agent.q_net.state_dict(), f"models/agent_DQN_last.pth")
+        
+        torch.save(agent.q_net.state_dict(), f"models/{save_name}_last.pth")
 
     return agent.q_net
 
