@@ -186,14 +186,21 @@ def main():
         ci_reward = 1.96 * (std_reward / np.sqrt(len(rewards)))
 
         success_rate = np.mean(successes) * 100.0
+        std_success = np.std(successes)
+        ci_success = 1.96 * (std_success / np.sqrt(len(successes)))
+        ci_success = ci_success * 100
+
+
         avg_duration = np.mean(durations)
+        std_duration = np.std(durations)
+        ci_duration = 1.96 * (std_duration / np.sqrt(len(durations)))
 
         print("\n" + "="*40)
         print(f"RESULTS ({args.num_episodes} episodes)")
         print("="*40)
         print(f"Avg Reward    : {avg_reward:.2f} ± {ci_reward:.2f}")
-        print(f"Success Rate  : {success_rate:.1f}%")
-        print(f"Avg Duration  : {avg_duration:.1f} steps")
+        print(f"Success Rate  : {success_rate:.1f}% ± {ci_success:.1f} %" )
+        print(f"Avg Duration  : {avg_duration:.1f} ± {ci_duration:.1f} steps")
         print("="*40 + "\n")
 
 if __name__ == "__main__":
