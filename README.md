@@ -1,166 +1,142 @@
-# ShepherdRL – Progressive Robotic Shepherding with Rule-Based and RL Agents
+# ShepherdRL – Progressive Robotic Shepherding (PPO vs DQN)
 
-ShepherdRL is a **custom reinforcement learning environment** for robotic shepherding inspired by biologically grounded flocking dynamics (e.g., the Strömbom model).  
-The environment is structured into **four progressive problem levels**, enabling curriculum learning from simple deterministic control to multi-agent coordination.
+**ShepherdRL** is a custom reinforcement learning environment for robotic shepherding inspired by biologically grounded flocking dynamics. This project serves as a research testbed to compare **Continuous Vector-based RL (PPO)** against **Visual Image-based RL (DQN)** across progressively difficult environments.
 
-The project follows a **Gym-style API**, includes **real-time visualization using Pygame**, and supports both **rule-based agents** and **reinforcement learning agents** (e.g., PPO via Stable-Baselines3).
+The environment provides a **Gym-style API**, features real-time **Pygame visualization**, and supports automated **Curriculum Learning**.
 
 ---
 
-## Installation: Create a Python environment (recommended)
+## Key Features & Research Focus
+
+* **Algorithmic Comparison:** Benchmarking PPO (using coordinate vectors) vs. DQN (using CNNs on pixel inputs).
+* **Automated Curriculum Learning (`-cl`):** Built-in mechanics to transfer weights, reset optimizers, and halve training time when moving to harder environment levels.
+* **Robust Baselines:** Includes deterministic Expert (Rule-Based), Random (Tipsy), and Immobile (Lazy) agents for statistical comparison.
+* **Dimensionality Curse Analysis:** Evaluates the models' capacity to scale from a single sheep to a multi-entity flock (3 sheep).
+
+---
+
+## Installation
+
+It is recommended to use a dedicated Python environment:
 
 ```bash
 conda create -n shepherding python=3.12
 conda activate shepherding
 pip install -r requirements.txt
+
 ```
+
+*(Note: Ensure you have installed `stable-baselines3`, `torch`, and `pygame` via the requirements file).*
+
+---
 
 ## Project Structure
 
-```bash
+```text
 shepherd_rl/
 │
 ├─ envs/
-│  └─ shepherd_env.py        # Gym environment
+│  └─ shepherd_env.py         # Custom Gym environment (physics & rules)
 │
 ├─ agents/
-│  ├─ rule_based_agent.py   # Heuristic agent
-│  ├─ rl_agent.py           # RL utilities
-│  └─ CNN_QN.py           # DQN agent with pytorch
+│  ├─ rule_based_agent.py     # Heuristic expert agent
+│  ├─ rl_agent.py             # RL utilities & PPO setup
+│  └─ CNN_QN.py               # DQN custom agent with PyTorch
 │
-├─ test.py                  # Run simulation (rule-based or RL)
-├─ train.py                 # Train RL agents (Levels 3 & 4)
-├─ models/                  # Saved RL models (.zip)
+├─ generate_graphs.py         # 📊 Script to extract Excel data & plot metrics with ± error bars
+├─ test.py                    # Run simulations (Rule-based or RL) over N episodes
+├─ train.py                   # Train RL agents (Supports Scratch & Curriculum Learning)
+├─ models/                    # Saved RL models (.zip / .pth)
 └─ README.md
+
 ```
 
 ---
 
-## Problem Levels
+## The Curriculum: Problem Levels
 
-### Level 1 – Basic Shepherding (Sleepy Sheep)
+The environment is structured into progressive levels to train and evaluate the agents. We modified the core physics to introduce stochasticity (`active_sheep`), forcing the agent to anticipate rather than just react.
 
-**Purpose:**  
-Learn fundamental shepherd–sheep interaction in a fully deterministic setting.
+### Level 1 – Sleepy Sheep (Sanity Check)
 
-**Configuration:**
-- Single shepherd agent
-- No obstacles
-- Sheep are *sleepy* (static unless influenced)
-- Deterministic dynamics
+* **Rules:** 1 to 3 Sheep. No obstacles. Sheep are static unless the shepherd is within their repulsion radius.
+* **Goal:** Learn fundamental pushing trajectories.
 
-**Sheep Behavior:**
-- Sheep do not move unless the shepherd is close
-- When close, sheep move directly away from the shepherd
+### Level 2 – Active Sheep (Stochastic Motion)
 
-**Training Variants:**
-- Number of sheep: **1, 2, or 3**
-
----
-
-### Level 2 – Active Sheep (Random Motion)
-
-**Purpose:**  
-Introduce stochasticity and robustness requirements.
-
-**Configuration:**
-- Single shepherd agent
-- No obstacles
-- Variable number of sheep
-
-**Sheep Behavior:**
-- If the shepherd is far: sheep move randomly
-- If the shepherd is close: sheep move away from the shepherd
-
----
+* **Rules:** Sheep now possess continuous random motion (`np.random.uniform`) when the shepherd is far.
+* **Goal:** Introduce stochasticity and force the agent to correct dynamic trajectories.
 
 ### Level 3 – Obstacle-Constrained Shepherding
 
-**Purpose:**  
-Introduce spatial constraints and navigation challenges.
+* **Rules:** A circular obstacle (radius = 0.2) is placed in the center. Neither the sheep nor the shepherd can pass through it.
+* **Goal:** Force the agent to unlearn straight-line trajectories and develop obstacle-avoidance strategies.
 
-**Configuration:**
-- Single shepherd agent
-- One circular obstacle in the environment
+### Level 4 – Multi-Agent (Work in Progress)
 
-**Obstacle Rules:**
-- Sheep cannot enter the obstacle area
-- Shepherd cannot pass through the obstacle
-
-**Sheep Behavior:**
-- Same as Level 2
+* **Rules:** Two trained shepherd agents alternating actions to control a larger flock.
 
 ---
 
-### Level 4 – Alternating Multi-Agent Shepherding
+## Agents Available
 
-**Purpose:**  
-Learn coordination under **turn-based multi-agent control**.
+### Reinforcement Learning Agents
 
-**Configuration:**
-- Two trained shepherd agents
-- Shared environment and shared goal
-- No simultaneous actions
+1. **PPO (Proximal Policy Optimization):** Exploits a continuous observation vector (X/Y coordinates).
+2. **DQN (Deep Q-Network):** Exploits a visual representation of the environment using a Convolutional Neural Network (CNN).
 
-**Control Mechanism:**
-- Only one shepherd acts at each timestep
-- Agents alternate actions deterministically
+### Baseline Agents
 
----
-
-## Sheep Behavior Summary
-
-| Condition | Sheep Action |
-|--------|-------------|
-| Shepherd close | Move away from shepherd |
-| Shepherd far (Level 1) | Remain static |
-| Shepherd far (Levels 2–4) | Random movement |
-| Inside goal | Locked, cannot exit |
-| Inside obstacle | Not allowed |
+* **Rule-Based (Expert):** Computes a driving point behind the furthest sheep to push it toward the goal. Deterministic and highly efficient.
+* **Lazy Shepherd:** Stays completely static (used to measure the environment's base entropy).
+* **Tipsy Shepherd:** Takes entirely random actions.
 
 ---
 
-## Rule-Based Shepherd Agents
+## Usage & CLI Examples
 
-Three **rule-based shepherd agents** are included for benchmarking, debugging, and comparison against RL policies.
+The project is driven by highly parameterized CLI scripts (`train.py` and `test.py`).
+
+**1. Test a Baseline (e.g., Rule-Based on 3 sheep):**
+
+```bash
+python test.py -t ruleBase -s 3 -n 1000
+
+```
+
+**2. Train PPO from Scratch (Level 1):**
+
+```bash
+python train.py -a ppo -s 1
+
+```
+
+**3. Curriculum Learning (Train Level 2 using Level 1 weights):**
+
+```bash
+python train.py -a ppo -s 1 --active_sheep -c models/ppo_sheep1_obst0_sleepy.zip -cl
+
+```
+
+**4. Evaluate a trained DQN model on Level 3 with Obstacles:**
+
+```bash
+python test.py -t DQN -a models/dqn_sheep1_obst2_active_best.pth -s 1 -r 0.2 --active_sheep -n 100
+
+```
 
 ---
 
-### 1. Standard Rule-Based Shepherd
+## Key Findings
 
-**Behavior:**
-- Selects the sheep furthest from the goal
-- Computes a driving point behind the sheep along the goal → sheep line
-- Moves toward the driving point to push the sheep toward the goal
-
-**Characteristics:**
-- Deterministic
-- Goal-driven
-
----
-
-### 2. Lazy Shepherd
-
-
-**Behavior:**
-- Always outputs a **constant action**
-- Action does not depend on sheep positions, goal location, or environment state
-- No feedback or adaptation
-
----
-
-### 3. Tipsy Shepherd
-
-**Behavior:**
-- Actions are sampled **entirely at random**
-- No dependence on observations or goal
-- No internal logic or strategy
+* **State Representation Matters:** The coordinate-based PPO agent consistently outperformed the image-based DQN agent in both Success Rate and Average Reward stability.
+* **Curriculum Learning is double-edged:** Fine-tuning via Curriculum Learning drastically improved performance when adapting to dynamic motion (Level 1 → Level 2). However, when facing a topological shift (adding an obstacle in Level 3), training from scratch yielded better results, as the agent didn't have to "unlearn" its straight-line bias.
+* **The Dimensionality Curse:** Scaling the observation vector from 1 to 3 sheep without collective metrics (like center of mass) caused deep learning models to collapse (sub-5% success rate), highlighting the need for advanced state representations in multi-agent tracking.
 
 ---
 
 ## Future Extensions
 
-- Multiple and dynamic obstacles
-- Communication between shepherd agents
-- Competitive multi-goal scenarios
-- Domain randomization for sim-to-real transfer
+* Implementing Reward Shaping (Curriculum on the goal radius size for high-precision herding).
+* Providing collective flock metrics (center of gravity, dispersion radius) to solve the 3-sheep dimensionality curse.
+* Training Level 4 (Multi-Agent shepherds).
