@@ -29,7 +29,7 @@ class ShepherdEnv(gym.Env):
         sheep_repulsion_radius=0.2,
         shepherd_speed=0.05,
         max_steps=500,
-        active_sheep=False  # <--- NOUVEL ARGUMENT AJOUTÉ ICI
+        active_sheep=False
     ):
         super().__init__()
 
@@ -135,14 +135,12 @@ class ShepherdEnv(gym.Env):
             vec = s - self.shepherd
             dist = np.linalg.norm(vec)
 
-            # --- LOGIQUE MODIFIÉE ICI ---
             if dist < self.repulsion_radius:
                 # Comportement de fuite (Si le berger est proche)
                 move += (vec / (dist + 1e-6)) * 0.05
             elif self.active_sheep:
                 # Comportement aléatoire (Si le berger est loin ET active_sheep est True)
                 move += np.random.uniform(-0.01, 0.01, size=2)
-            # ----------------------------
 
             if np.linalg.norm(s - self.goal) > self.goal_radius:
                 if self.obstacle_radius > 0:
